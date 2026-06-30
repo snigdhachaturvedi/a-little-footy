@@ -1,5 +1,5 @@
 // === Configure this after deploying the Apps Script web app (see apps-script/SETUP.md) ===
-const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwKqPwghev-jNNa5MVmYeQt7DihgTqRRLzNiBBHorlMyD60CyE41y5XuuplzM1ymJ4F8A/exec';
 
 const POLL_INTERVAL_MS = 60000;
 const TARGET_TOTAL = 500;
