@@ -597,6 +597,53 @@ input:focus, select:focus {
 .status-badge.alive { background: #d8efe1; color: var(--pitch); }
 .status-badge.out { background: #f1d8d8; color: #8a2c2c; }
 
+.reset-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1.5px dashed var(--red);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  background: #fff5f5;
+}
+
+.reset-warning {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #8a2c2c;
+  font-weight: 600;
+}
+
+.reset-warning code {
+  background: #ffe1e1;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+#resetConfirmInput {
+  padding: 11px 13px;
+  border: 1.5px solid #f3c2c2;
+  border-radius: var(--radius-sm);
+}
+
+#resetPoolBtn {
+  background: var(--red);
+  color: white;
+  border: none;
+  padding: 13px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+#resetPoolBtn:hover:not(:disabled) { transform: translateY(-1px); }
+
+#resetPoolBtn:disabled {
+  background: #e8b8b8;
+  cursor: not-allowed;
+}
+
 .winners-list { display: flex; flex-direction: column; gap: 8px; }
 
 .winner-row {

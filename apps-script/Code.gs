@@ -62,8 +62,8 @@ function jsonOut_(obj) {
 function doGet(e) {
   const supplied = e.parameter.password;
   const config = getConfig_();
-  const validPassword = supplied &&
-    (String(supplied) === String(config.SharedPassword) || String(supplied) === String(config.AdminPassword));
+  const isAdmin = supplied && String(supplied) === String(config.AdminPassword);
+  const validPassword = isAdmin || (supplied && String(supplied) === String(config.SharedPassword));
 
   if (!validPassword) {
     return jsonOut_({ ok: false, error: 'Unauthorized' });
@@ -78,7 +78,7 @@ function doGet(e) {
   delete config.SharedPassword;
   delete config.AdminPassword;
 
-  return jsonOut_({ ok: true, tickets, teams, config, winners });
+  return jsonOut_({ ok: true, tickets, teams, config, winners, isAdmin });
 }
 
 function doPost(e) {
@@ -99,6 +99,8 @@ function doPost(e) {
         return jsonOut_(reviveTeam_(body));
       case 'declareChampion':
         return jsonOut_(declareChampion_(body));
+      case 'resetPool':
+        return jsonOut_(resetPool_(body));
       default:
         return jsonOut_({ ok: false, error: 'Unknown action: ' + body.action });
     }
@@ -215,4 +217,46 @@ function declareChampion_(body) {
   setConfigValue_('WinnersAnnounced', true);
 
   return { ok: true, champion, totalPool, totalChampionStake };
+}
+
+function deleteConfigKey_(key) {
+  const sheet = getSheet_(SHEET_CONFIG);
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][0] === key) sheet.deleteRow(i + 1);
+  }
+}
+
+function resetPool_(body) {
+  checkPassword_(body.password, 'AdminPassword');
+
+  // Wipe all bets.
+  const ticketsSheet = getSheet_(SHEET_TICKETS);
+  const lastRow = ticketsSheet.getLastRow();
+  if (lastRow > 1) {
+    ticketsSheet.getRange(2, 1, lastRow - 1, ticketsSheet.getLastColumn()).clearContent();
+  }
+
+  // Reset every team back to alive.
+  const teamsSheet = getSheet_(SHEET_TEAMS);
+  const teamsLastRow = teamsSheet.getLastRow();
+  if (teamsLastRow > 1) {
+    const numTeams = teamsLastRow - 1;
+    teamsSheet.getRange(2, 2, numTeams, 1).setValue(false);
+    teamsSheet.getRange(2, 3, numTeams, 2).clearContent();
+  }
+
+  // Clear champion/winners state.
+  deleteConfigKey_('Champion');
+  deleteConfigKey_('TotalPool');
+  deleteConfigKey_('WinnersAnnounced');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const winnersSheet = ss.getSheetByName(SHEET_WINNERS);
+  if (winnersSheet) {
+    winnersSheet.clear();
+    winnersSheet.appendRow(WINNER_HEADERS);
+  }
+
+  return { ok: true };
 }

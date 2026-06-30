@@ -66,6 +66,10 @@ with your deployment URL. Save, then reload `index.html`.
 - To simulate an elimination, flip a team's `Eliminated` cell to `TRUE` directly in the `Teams` tab (or send a POST with `action: "eliminateTeam"` and the `AdminPassword`) — the site picks it up within 60 seconds.
 - To declare a champion and trigger payouts, send a POST with `action: "declareChampion"`, the `team` name, and the `AdminPassword`. A `Winners` tab will be created automatically with proportional payouts.
 
+## Admin: resetting the pool
+
+Logging in with the `AdminPassword` unlocks a hidden **Admin** tab on the site with a "Reset Pool" control (type `RESET` to confirm). This wipes all bets, sets every team back to alive, and clears the champion/winners — use it to start a new pool from scratch. There's no undo, so double-check before confirming.
+
 ## Redeploying after editing Code.gs
 
 If you change `Code.gs` later, use **Deploy > Manage deployments > Edit (pencil) > New version > Deploy** — the web app URL stays the same.

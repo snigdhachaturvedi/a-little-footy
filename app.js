@@ -6,7 +6,7 @@ const TARGET_TOTAL = 500;
 const MIN_PICK = 100;
 const MAX_PICKS = 3;
 
-let state = { tickets: [], teams: [], config: {}, winners: [] };
+let state = { tickets: [], teams: [], config: {}, winners: [], isAdmin: false };
 let lastChampion = null;
 
 const $ = id => document.getElementById(id);
@@ -281,6 +281,7 @@ async function refresh() {
     renderTeams(data.teams, data.config);
     renderPlayers(data.tickets, data.teams);
     renderWinners(data.winners);
+    $('adminTabBtn').classList.toggle('hidden', !data.isAdmin);
 
     if ($('picksContainer').children.length === 0) addPickRow();
     document.querySelectorAll('#picksContainer .pick-team').forEach(sel => {
@@ -358,6 +359,38 @@ function showApp() {
   startApp();
 }
 
+function setupAdminReset() {
+  const input = $('resetConfirmInput');
+  const btn = $('resetPoolBtn');
+  input.addEventListener('input', () => {
+    btn.disabled = input.value.trim() !== 'RESET';
+  });
+
+  btn.addEventListener('click', async () => {
+    const feedback = $('resetFeedback');
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    btn.disabled = true;
+    try {
+      const result = await apiPost({ action: 'resetPool', password: getPoolPassword() });
+      if (result.ok) {
+        feedback.textContent = '✅ Pool reset. All bets, eliminations, and winners cleared.';
+        feedback.classList.add('success');
+        input.value = '';
+        await refresh();
+      } else {
+        feedback.textContent = result.error || 'Something went wrong.';
+        feedback.classList.add('error');
+        btn.disabled = false;
+      }
+    } catch (err) {
+      feedback.textContent = 'Network error: ' + err.message;
+      feedback.classList.add('error');
+      btn.disabled = false;
+    }
+  });
+}
+
 let appStarted = false;
 function startApp() {
   if (appStarted) return;
@@ -366,6 +399,7 @@ function startApp() {
     $('configWarning').classList.remove('hidden');
   }
   setupTabs();
+  setupAdminReset();
   $('addPickBtn').addEventListener('click', addPickRow);
   $('betForm').addEventListener('submit', handleBetSubmit);
   addPickRow();

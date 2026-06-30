@@ -58,6 +58,7 @@
     <button class="tab-btn active" data-tab="bet">🎟️ Place Bet</button>
     <button class="tab-btn" data-tab="teams">🌍 Teams</button>
     <button class="tab-btn" data-tab="players">👥 Leaderboard</button>
+    <button class="tab-btn hidden" data-tab="admin" id="adminTabBtn">🛠️ Admin</button>
   </nav>
 
   <section class="card panel" id="panel-bet" data-panel="bet">
@@ -103,6 +104,17 @@
   <section class="card hidden" id="winnersCard">
     <h2>🎉 Winners</h2>
     <div id="winnersList" class="winners-list"></div>
+  </section>
+
+  <section class="card panel hidden" id="panel-admin" data-panel="admin">
+    <h2>🛠️ Admin</h2>
+    <p class="hint">Visible only to you, the organizer. Resetting wipes <strong>all</strong> bets, team statuses, and winners — there's no undo.</p>
+    <div class="reset-box">
+      <p class="reset-warning">To reset the entire pool and start fresh, type <code>RESET</code> below and confirm.</p>
+      <input type="text" id="resetConfirmInput" placeholder="Type RESET to confirm" autocomplete="off">
+      <button type="button" id="resetPoolBtn" disabled>🗑️ Reset Pool — Wipe Everything</button>
+      <div id="resetFeedback" class="feedback"></div>
+    </div>
   </section>
 </main>
 
