@@ -10,13 +10,19 @@ let state = { tickets: [], teams: [], config: {}, winners: [] };
 let lastChampion = null;
 
 const $ = id => document.getElementById(id);
+const SESSION_KEY = 'footyPoolPassword';
 
 function isConfigured() {
   return API_URL && !API_URL.startsWith('PASTE_');
 }
 
+function getPoolPassword() {
+  return sessionStorage.getItem(SESSION_KEY) || '';
+}
+
 async function apiGet() {
-  const res = await fetch(API_URL, { method: 'GET' });
+  const url = API_URL + '?password=' + encodeURIComponent(getPoolPassword());
+  const res = await fetch(url, { method: 'GET' });
   return res.json();
 }
 
@@ -235,7 +241,7 @@ async function handleBetSubmit(e) {
   }
 
   const name = $('bettorName').value.trim();
-  const password = $('sharedPassword').value;
+  const password = getPoolPassword();
   const picks = currentPicks();
 
   $('submitBetBtn').disabled = true;
@@ -323,7 +329,39 @@ function spawnConfetti(count, duration) {
   }
 }
 
-function init() {
+async function tryEnter(password, feedbackEl) {
+  if (!isConfigured()) {
+    sessionStorage.setItem(SESSION_KEY, password);
+    showApp();
+    return true;
+  }
+  const url = API_URL + '?password=' + encodeURIComponent(password);
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    const data = await res.json();
+    if (data.ok) {
+      sessionStorage.setItem(SESSION_KEY, password);
+      showApp();
+      return true;
+    }
+    if (feedbackEl) feedbackEl.textContent = 'Wrong password — ask your organizer.';
+    return false;
+  } catch (err) {
+    if (feedbackEl) feedbackEl.textContent = 'Network error: ' + err.message;
+    return false;
+  }
+}
+
+function showApp() {
+  $('gateScreen').classList.add('hidden');
+  $('appRoot').classList.remove('hidden');
+  startApp();
+}
+
+let appStarted = false;
+function startApp() {
+  if (appStarted) return;
+  appStarted = true;
   if (!isConfigured()) {
     $('configWarning').classList.remove('hidden');
   }
@@ -335,4 +373,20 @@ function init() {
   setInterval(refresh, POLL_INTERVAL_MS);
 }
 
-init();
+function initGate() {
+  $('gateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const feedback = $('gateFeedback');
+    feedback.textContent = '';
+    const password = $('gatePassword').value;
+    const ok = await tryEnter(password, feedback);
+    if (!ok) $('gatePassword').value = '';
+  });
+
+  const remembered = getPoolPassword();
+  if (remembered) {
+    tryEnter(remembered, null);
+  }
+}
+
+initGate();

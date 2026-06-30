@@ -60,9 +60,17 @@ function jsonOut_(obj) {
 }
 
 function doGet(e) {
+  const supplied = e.parameter.password;
+  const config = getConfig_();
+  const validPassword = supplied &&
+    (String(supplied) === String(config.SharedPassword) || String(supplied) === String(config.AdminPassword));
+
+  if (!validPassword) {
+    return jsonOut_({ ok: false, error: 'Unauthorized' });
+  }
+
   const tickets = readRows_(SHEET_TICKETS);
   const teams = readRows_(SHEET_TEAMS);
-  const config = getConfig_();
   let winners = [];
   try { winners = readRows_(SHEET_WINNERS); } catch (err) { winners = []; }
 

@@ -11,6 +11,20 @@
 
 <div class="pitch-lines" aria-hidden="true"></div>
 
+<div id="gateScreen" class="gate-screen">
+  <div class="gate-card">
+    <p class="kicker">🔒 TEAM ONLY</p>
+    <h1 class="gate-title">The Footy Pool</h1>
+    <p class="gate-text">Enter the pool password to view the stats, teams, and leaderboard.</p>
+    <form id="gateForm">
+      <input type="password" id="gatePassword" placeholder="Pool password" required autofocus>
+      <button type="submit">Enter</button>
+    </form>
+    <div id="gateFeedback" class="feedback error"></div>
+  </div>
+</div>
+
+<div id="appRoot" class="hidden">
 <header class="hero">
   <div class="hero-glow"></div>
   <p class="kicker">🏆 2026 FIFA WORLD CUP</p>
@@ -65,10 +79,6 @@
         <span id="sumIndicator" class="sum-indicator">Rs.0 / Rs.500</span>
       </div>
 
-      <label>Shared Pool Password
-        <input type="password" id="sharedPassword" required placeholder="Ask your organizer">
-      </label>
-
       <button type="submit" id="submitBetBtn">⚽ Place Bet</button>
       <div id="betFeedback" class="feedback"></div>
     </form>
@@ -99,6 +109,7 @@
 <footer>
   <p>Built for the team's World Cup pool. Data lives in a private Google Sheet — this page just displays it. Flags via <a href="https://flagcdn.com" target="_blank" rel="noopener">flagcdn.com</a>.</p>
 </footer>
+</div>
 
 <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
 

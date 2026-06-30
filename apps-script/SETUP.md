@@ -60,7 +60,8 @@ with your deployment URL. Save, then reload `index.html`.
 
 ## 5. Test it
 
-- Place a test bet from the site (1-3 teams, splits totaling exactly Rs.500, multiples of 10, min Rs.100 each) using the `SharedPassword` you set.
+- Open the site — you'll see a password gate. Enter the `SharedPassword` you set in the Config tab. Viewing pool stats, teams, and the leaderboard all require this password now (not just placing bets).
+- Place a test bet from the site (1-3 teams, splits totaling exactly Rs.500, multiples of 10, min Rs.100 each).
 - Check the `Tickets` tab — you should see one row per pick, sharing a `TicketId`.
 - To simulate an elimination, flip a team's `Eliminated` cell to `TRUE` directly in the `Teams` tab (or send a POST with `action: "eliminateTeam"` and the `AdminPassword`) — the site picks it up within 60 seconds.
 - To declare a champion and trigger payouts, send a POST with `action: "declareChampion"`, the `team` name, and the `AdminPassword`. A `Winners` tab will be created automatically with proportional payouts.

@@ -43,6 +43,92 @@ body {
 
 .hidden { display: none !important; }
 
+/* Gate screen */
+.gate-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(30,224,138,0.18), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(255,207,77,0.12), transparent 40%),
+    linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 60%, #07211a 100%);
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,207,77,0.25);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius);
+  padding: 36px 30px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.gate-title {
+  margin: 4px 0 10px;
+  font-size: 1.9rem;
+  background: linear-gradient(90deg, #ffffff, #d9ffe9 60%, var(--pitch-glow));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gate-text {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+}
+
+#gateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#gateForm input {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 1rem;
+  text-align: center;
+}
+
+#gateForm input::placeholder { color: rgba(255,255,255,0.4); }
+
+#gateForm input:focus {
+  outline: none;
+  border-color: var(--pitch-glow);
+  box-shadow: 0 0 0 3px rgba(30,224,138,0.2);
+}
+
+#gateForm button {
+  background: linear-gradient(90deg, var(--pitch-light), var(--pitch-glow));
+  color: #06291c;
+  border: none;
+  padding: 13px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.15s ease;
+}
+
+#gateForm button:hover { transform: translateY(-1px); }
+
+.gate-card .feedback {
+  margin-top: 14px;
+  min-height: 1.2em;
+}
+
 h1, h2 { font-family: 'Space Grotesk', sans-serif; }
 
 .hero {
