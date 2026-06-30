@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ World Cup Pool</title>
+<link rel="preconnect" href="https://flagcdn.com">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="pitch-lines" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="hero-glow"></div>
+  <p class="kicker">🏆 2026 FIFA WORLD CUP</p>
+  <h1>The Footy Pool</h1>
+  <p class="tagline">Pick your champions. Survive the knockouts. Take the pot.</p>
+
+  <div class="hero-stats" id="heroStats">
+    <div class="stat">
+      <span class="stat-value" id="statPool">Rs.0</span>
+      <span class="stat-label">Total Pool</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="statPlayers">0</span>
+      <span class="stat-label">Players In</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="statTeamsAlive">0</span>
+      <span class="stat-label">Teams Alive</span>
+    </div>
+  </div>
+
+  <div id="champBanner" class="champ-banner hidden"></div>
+</header>
+
+<main>
+  <section id="configWarning" class="card warning hidden">
+    ⚠️ Backend not connected yet. Set <code>API_URL</code> in <code>app.js</code> — see <code>apps-script/SETUP.md</code>.
+  </section>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="bet">🎟️ Place Bet</button>
+    <button class="tab-btn" data-tab="teams">🌍 Teams</button>
+    <button class="tab-btn" data-tab="players">👥 Leaderboard</button>
+  </nav>
+
+  <section class="card panel" id="panel-bet" data-panel="bet">
+    <h2>Place Your Bet</h2>
+    <p class="hint">Total stake is fixed at <strong>Rs.500</strong>, split across 1–3 teams. Each pick: min Rs.100, multiples of 10, must add up to exactly Rs.500.</p>
+    <form id="betForm">
+      <label>Your Name
+        <input type="text" id="bettorName" required maxlength="40" placeholder="e.g. Priya">
+      </label>
+
+      <div id="picksContainer"></div>
+
+      <div class="picks-actions">
+        <button type="button" id="addPickBtn">+ Add another team</button>
+      </div>
+
+      <div class="sum-gauge">
+        <div class="sum-gauge-track"><div class="sum-gauge-fill" id="sumGaugeFill"></div></div>
+        <span id="sumIndicator" class="sum-indicator">Rs.0 / Rs.500</span>
+      </div>
+
+      <label>Shared Pool Password
+        <input type="password" id="sharedPassword" required placeholder="Ask your organizer">
+      </label>
+
+      <button type="submit" id="submitBetBtn">⚽ Place Bet</button>
+      <div id="betFeedback" class="feedback"></div>
+    </form>
+  </section>
+
+  <section class="card panel hidden" id="panel-teams" data-panel="teams">
+    <h2>Teams</h2>
+    <p class="hint">Updates automatically as results come in.</p>
+    <div class="legend">
+      <span><i class="dot alive"></i> Alive</span>
+      <span><i class="dot out"></i> Eliminated</span>
+      <span><i class="dot champ"></i> Champion</span>
+    </div>
+    <div id="teamsGrid" class="teams-grid"></div>
+  </section>
+
+  <section class="card panel hidden" id="panel-players" data-panel="players">
+    <h2>Leaderboard</h2>
+    <div id="playersList" class="players-list"></div>
+  </section>
+
+  <section class="card hidden" id="winnersCard">
+    <h2>🎉 Winners</h2>
+    <div id="winnersList" class="winners-list"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Built for the team's World Cup pool. Data lives in a private Google Sheet — this page just displays it. Flags via <a href="https://flagcdn.com" target="_blank" rel="noopener">flagcdn.com</a>.</p>
+</footer>
+
+<div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+
+<template id="pickRowTemplate">
+  <div class="pick-row">
+    <div class="pick-flag-wrap">
+      <img class="pick-flag" alt="" />
+    </div>
+    <select class="pick-team" required></select>
+    <input type="number" class="pick-amount" min="100" step="10" placeholder="₹" required>
+    <button type="button" class="remove-pick-btn" title="Remove">&times;</button>
+  </div>
+</template>
+
+<script src="flags.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
