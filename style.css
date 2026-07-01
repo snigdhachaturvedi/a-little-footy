@@ -597,6 +597,26 @@ input:focus, select:focus {
 .status-badge.alive { background: #d8efe1; color: var(--pitch); }
 .status-badge.out { background: #f1d8d8; color: #8a2c2c; }
 
+.live-check-box {
+  border: 1.5px solid #d6efe0;
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  background: #f3fbf6;
+  margin-bottom: 18px;
+}
+
+#checkLiveNowBtn {
+  background: var(--pitch-light);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#checkLiveNowBtn:hover { background: var(--pitch); }
+
 .reset-box {
   display: flex;
   flex-direction: column;

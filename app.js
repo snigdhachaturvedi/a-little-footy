@@ -6,6 +6,31 @@ const TARGET_TOTAL = 500;
 const MIN_PICK = 100;
 const MAX_PICKS = 3;
 
+// Free, no-key public scoreboard — used to auto-detect knockout eliminations and the champion.
+const ESPN_SCOREBOARD_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const TOURNAMENT_START = '20260611';
+const LIVE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
+// ESPN's team names that differ from the ones in our Teams sheet.
+const ESPN_NAME_MAP = {
+  'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
+  'Congo DR': 'DR Congo',
+  'Curaçao': 'Curacao',
+  'Türkiye': 'Turkey',
+  'United States': 'USA',
+};
+
+function mapEspnTeam(name) {
+  return ESPN_NAME_MAP[name] || name;
+}
+
+function humanizeRound(slug) {
+  return String(slug || '')
+    .split('-')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 let state = { tickets: [], teams: [], config: {}, winners: [], isAdmin: false };
 let lastChampion = null;
 
@@ -359,6 +384,84 @@ function showApp() {
   startApp();
 }
 
+function todayCompact() {
+  const d = new Date(Date.now() + 24 * 60 * 60 * 1000); // +1 day buffer for timezones
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
+
+async function fetchLiveEvents() {
+  const url = `${ESPN_SCOREBOARD_URL}?dates=${TOURNAMENT_START}-${todayCompact()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Scoreboard fetch failed: ' + res.status);
+  const data = await res.json();
+  return data.events || [];
+}
+
+let liveCheckRunning = false;
+
+async function checkLiveResults(manual) {
+  const statusEl = $('liveCheckStatus');
+  if (!state.isAdmin) return;
+  if (liveCheckRunning) return;
+  liveCheckRunning = true;
+  if (statusEl) statusEl.textContent = 'Checking latest results…';
+
+  try {
+    const events = await fetchLiveEvents();
+    const eliminated = eliminatedSet(state.teams);
+    const knownTeams = new Set(state.teams.map(t => t.Team));
+    const actions = [];
+
+    events.forEach(ev => {
+      const comp = ev.competitions && ev.competitions[0];
+      const slug = ev.season && ev.season.slug;
+      if (!comp || !slug || slug.includes('group')) return;
+      if (!comp.status || !comp.status.type || !comp.status.type.completed) return;
+
+      const competitors = comp.competitors || [];
+      const winner = competitors.find(c => c.winner === true);
+      const loser = competitors.find(c => c.winner === false);
+      if (!winner || !loser) return;
+
+      const winnerTeam = mapEspnTeam(winner.team.displayName);
+      const loserTeam = mapEspnTeam(loser.team.displayName);
+      const round = humanizeRound(slug);
+
+      if (knownTeams.has(loserTeam) && !eliminated.has(loserTeam)) {
+        actions.push({ type: 'eliminate', team: loserTeam, round });
+      }
+      if (slug === 'final' && knownTeams.has(winnerTeam) && state.config.Champion !== winnerTeam) {
+        actions.push({ type: 'champion', team: winnerTeam });
+      }
+    });
+
+    if (actions.length === 0) {
+      if (statusEl) statusEl.textContent = `No new results as of ${new Date().toLocaleTimeString()}.`;
+      return;
+    }
+
+    for (const action of actions) {
+      if (action.type === 'eliminate') {
+        await apiPost({ action: 'eliminateTeam', team: action.team, round: action.round, password: getPoolPassword() });
+      } else if (action.type === 'champion') {
+        await apiPost({ action: 'declareChampion', team: action.team, password: getPoolPassword() });
+      }
+    }
+
+    const summary = actions.map(a => a.type === 'champion' ? `${a.team} crowned champion!` : `${a.team} eliminated (${a.round})`).join(', ');
+    if (statusEl) statusEl.textContent = `Updated: ${summary}`;
+    await refresh();
+  } catch (err) {
+    if (statusEl) statusEl.textContent = 'Live check failed: ' + err.message;
+    console.error('checkLiveResults failed', err);
+  } finally {
+    liveCheckRunning = false;
+  }
+}
+
 function setupAdminReset() {
   const input = $('resetConfirmInput');
   const btn = $('resetPoolBtn');
@@ -402,9 +505,12 @@ function startApp() {
   setupAdminReset();
   $('addPickBtn').addEventListener('click', addPickRow);
   $('betForm').addEventListener('submit', handleBetSubmit);
+  const checkNowBtn = $('checkLiveNowBtn');
+  if (checkNowBtn) checkNowBtn.addEventListener('click', () => checkLiveResults(true));
   addPickRow();
-  refresh();
+  refresh().then(() => checkLiveResults());
   setInterval(refresh, POLL_INTERVAL_MS);
+  setInterval(() => checkLiveResults(), LIVE_CHECK_INTERVAL_MS);
 }
 
 function initGate() {

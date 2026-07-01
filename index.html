@@ -108,7 +108,15 @@
 
   <section class="card panel hidden" id="panel-admin" data-panel="admin">
     <h2>🛠️ Admin</h2>
-    <p class="hint">Visible only to you, the organizer. Resetting wipes <strong>all</strong> bets, team statuses, and winners — there's no undo.</p>
+    <p class="hint">Visible only to you, the organizer.</p>
+
+    <div class="live-check-box">
+      <p class="hint" style="margin-top:0">Auto-checks live World Cup results every 5 minutes (while this tab is open) via a free public scoreboard, and marks eliminated teams / the champion automatically.</p>
+      <button type="button" id="checkLiveNowBtn">🔄 Check results now</button>
+      <div id="liveCheckStatus" class="hint" style="margin-top:8px"></div>
+    </div>
+
+    <p class="hint">Resetting wipes <strong>all</strong> bets, team statuses, and winners — there's no undo.</p>
     <div class="reset-box">
       <p class="reset-warning">To reset the entire pool and start fresh, type <code>RESET</code> below and confirm.</p>
       <input type="text" id="resetConfirmInput" placeholder="Type RESET to confirm" autocomplete="off">
