@@ -130,12 +130,15 @@ function placeBet_(body) {
 
   const teamsSeen = new Set();
   let sum = 0;
-  const validTeams = new Set(readRows_(SHEET_TEAMS).map(t => t.Team));
+  const teamRows = readRows_(SHEET_TEAMS);
+  const validTeams = new Set(teamRows.map(t => t.Team));
+  const eliminatedTeams = new Set(teamRows.filter(t => t.Eliminated === true).map(t => t.Team));
 
   picks.forEach(p => {
     const team = (p.team || '').trim();
     const amount = Number(p.amount);
     if (!team || !validTeams.has(team)) throw new Error('Invalid team: ' + team);
+    if (eliminatedTeams.has(team)) throw new Error(team + ' has already been eliminated');
     if (teamsSeen.has(team)) throw new Error('Duplicate team in one ticket: ' + team);
     teamsSeen.add(team);
     if (!Number.isFinite(amount) || amount < 100) throw new Error('Each pick must be at least Rs.100');

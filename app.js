@@ -186,9 +186,15 @@ function renderWinners(winners) {
     });
 }
 
-function populateTeamOptions(select, teams) {
+function populateTeamOptions(select, teams, keepValue) {
   select.innerHTML = '<option value="" disabled selected>Choose team</option>';
-  [...teams]
+  const alive = teams.filter(t => !(t.Eliminated === true || t.Eliminated === 'TRUE'));
+  // Keep a team the user already had selected visible (greyed out) even if it just got eliminated.
+  const keepTeam = keepValue && !alive.some(t => t.Team === keepValue)
+    ? teams.find(t => t.Team === keepValue)
+    : null;
+
+  [...alive]
     .sort((a, b) => String(a.Team).localeCompare(String(b.Team)))
     .forEach(t => {
       const opt = document.createElement('option');
@@ -196,6 +202,14 @@ function populateTeamOptions(select, teams) {
       opt.textContent = t.Team;
       select.appendChild(opt);
     });
+
+  if (keepTeam) {
+    const opt = document.createElement('option');
+    opt.value = keepTeam.Team;
+    opt.textContent = keepTeam.Team + ' (eliminated — pick another team)';
+    opt.disabled = true;
+    select.appendChild(opt);
+  }
 }
 
 function addPickRow() {
@@ -240,7 +254,8 @@ function updateSumIndicator() {
   const indicator = $('sumIndicator');
   indicator.textContent = `Rs.${sum} / Rs.${TARGET_TOTAL}`;
 
-  const valid = sum === TARGET_TOTAL && picks.every(p => p.amount >= MIN_PICK && p.amount % 10 === 0 && p.team);
+  const eliminated = eliminatedSet(state.teams);
+  const valid = sum === TARGET_TOTAL && picks.every(p => p.amount >= MIN_PICK && p.amount % 10 === 0 && p.team && !eliminated.has(p.team));
   const over = sum > TARGET_TOTAL;
   indicator.classList.toggle('ok', valid);
   indicator.classList.toggle('bad', !valid && sum > 0);
@@ -311,8 +326,9 @@ async function refresh() {
     if ($('picksContainer').children.length === 0) addPickRow();
     document.querySelectorAll('#picksContainer .pick-team').forEach(sel => {
       const current = sel.value;
-      populateTeamOptions(sel, data.teams);
+      populateTeamOptions(sel, data.teams, current);
       if (current) sel.value = current;
+      updateSumIndicator();
     });
   } catch (err) {
     console.error('Refresh failed', err);
