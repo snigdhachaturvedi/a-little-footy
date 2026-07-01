@@ -688,6 +688,16 @@ footer {
 
 footer a { color: var(--pitch-glow); }
 
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--pitch-glow);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
 /* Confetti */
 .confetti-layer {
   position: fixed;

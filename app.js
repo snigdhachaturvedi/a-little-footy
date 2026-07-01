@@ -35,14 +35,19 @@ let state = { tickets: [], teams: [], config: {}, winners: [], isAdmin: false };
 let lastChampion = null;
 
 const $ = id => document.getElementById(id);
-const SESSION_KEY = 'footyPoolPassword';
+const SESSION_KEY = 'footyPoolPassword'; // legacy key, purged on load — no longer used for storage
+
+// Kept in memory only (not sessionStorage) so every page load requires re-entering the
+// password. This is what lets an admin re-authenticate as admin after a shared-password
+// visit, instead of silently staying logged in as whichever password was typed first.
+let poolPassword = '';
 
 function isConfigured() {
   return API_URL && !API_URL.startsWith('PASTE_');
 }
 
 function getPoolPassword() {
-  return sessionStorage.getItem(SESSION_KEY) || '';
+  return poolPassword;
 }
 
 async function apiGet() {
@@ -373,7 +378,7 @@ function spawnConfetti(count, duration) {
 
 async function tryEnter(password, feedbackEl) {
   if (!isConfigured()) {
-    sessionStorage.setItem(SESSION_KEY, password);
+    poolPassword = password;
     showApp();
     return true;
   }
@@ -382,7 +387,7 @@ async function tryEnter(password, feedbackEl) {
     const res = await fetch(url, { method: 'GET' });
     const data = await res.json();
     if (data.ok) {
-      sessionStorage.setItem(SESSION_KEY, password);
+      poolPassword = password;
       showApp();
       return true;
     }
@@ -398,6 +403,17 @@ function showApp() {
   $('gateScreen').classList.add('hidden');
   $('appRoot').classList.remove('hidden');
   startApp();
+}
+
+function logOut() {
+  poolPassword = '';
+  appStarted = false;
+  lastChampion = null;
+  $('appRoot').classList.add('hidden');
+  $('gateScreen').classList.remove('hidden');
+  $('gatePassword').value = '';
+  $('gateFeedback').textContent = '';
+  $('gatePassword').focus();
 }
 
 function todayCompact() {
@@ -523,6 +539,8 @@ function startApp() {
   $('betForm').addEventListener('submit', handleBetSubmit);
   const checkNowBtn = $('checkLiveNowBtn');
   if (checkNowBtn) checkNowBtn.addEventListener('click', () => checkLiveResults(true));
+  const logOutBtn = $('logOutBtn');
+  if (logOutBtn) logOutBtn.addEventListener('click', logOut);
   addPickRow();
   refresh().then(() => checkLiveResults());
   setInterval(refresh, POLL_INTERVAL_MS);
@@ -530,6 +548,9 @@ function startApp() {
 }
 
 function initGate() {
+  // Purge any leftover password from an older version of this app that used sessionStorage.
+  try { sessionStorage.removeItem(SESSION_KEY); } catch (err) { /* ignore */ }
+
   $('gateForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const feedback = $('gateFeedback');
@@ -538,11 +559,6 @@ function initGate() {
     const ok = await tryEnter(password, feedback);
     if (!ok) $('gatePassword').value = '';
   });
-
-  const remembered = getPoolPassword();
-  if (remembered) {
-    tryEnter(remembered, null);
-  }
 }
 
 initGate();
