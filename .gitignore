@@ -1,0 +1,6 @@
+# Local Claude Code config — may contain secrets (e.g. admin password in saved commands)
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
