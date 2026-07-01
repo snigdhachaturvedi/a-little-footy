@@ -406,14 +406,10 @@ function showApp() {
 }
 
 function logOut() {
-  poolPassword = '';
-  appStarted = false;
-  lastChampion = null;
-  $('appRoot').classList.add('hidden');
-  $('gateScreen').classList.remove('hidden');
-  $('gatePassword').value = '';
-  $('gateFeedback').textContent = '';
-  $('gatePassword').focus();
+  // A full reload (rather than resetting in-place state) guarantees a clean slate: no
+  // stacked event listeners or duplicate setInterval timers left over from the previous
+  // login, which is what was causing the admin/non-admin state to feel unstable.
+  location.reload();
 }
 
 function todayCompact() {
@@ -447,10 +443,17 @@ async function checkLiveResults(manual) {
     const knownTeams = new Set(state.teams.map(t => t.Team));
     const actions = [];
 
+    // Group stage is intentionally NOT auto-processed here: a single match's win/loss/draw
+    // doesn't determine group-stage elimination (that depends on the full group table,
+    // goal difference, and tie-breakers). ESPN's per-match `advance` field looked promising
+    // but turned out to just mirror that match's own winner flag, not real standings — e.g.
+    // it showed Germany as "eliminated" partway through the group stage despite them
+    // finishing top of their group. Only knockout-stage matches (a clean, unambiguous
+    // winner) are auto-processed below.
     events.forEach(ev => {
       const comp = ev.competitions && ev.competitions[0];
       const slug = ev.season && ev.season.slug;
-      if (!comp || !slug || slug.includes('group')) return;
+      if (!comp || !slug || slug === 'group-stage') return;
       if (!comp.status || !comp.status.type || !comp.status.type.completed) return;
 
       const competitors = comp.competitors || [];
