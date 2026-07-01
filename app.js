@@ -438,6 +438,12 @@ async function checkLiveResults(manual) {
   if (statusEl) statusEl.textContent = 'Checking latest results…';
 
   try {
+    // Group-stage results are fixed history on the backend (see GROUP_STAGE_ELIMINATED in
+    // Code.gs) and re-applied here every check so an accidental "reset pool" doesn't leave
+    // those 16 teams looking alive until someone remembers to restore them by hand.
+    const seedResult = await apiPost({ action: 'seedGroupStage', password: getPoolPassword() });
+    const restoredGroupStage = seedResult.ok && seedResult.applied > 0;
+
     const events = await fetchLiveEvents();
     const eliminated = eliminatedSet(state.teams);
     const knownTeams = new Set(state.teams.map(t => t.Team));
@@ -474,7 +480,12 @@ async function checkLiveResults(manual) {
     });
 
     if (actions.length === 0) {
-      if (statusEl) statusEl.textContent = `No new results as of ${new Date().toLocaleTimeString()}.`;
+      if (restoredGroupStage) {
+        if (statusEl) statusEl.textContent = `Restored ${seedResult.applied} group-stage elimination(s) that had reverted to alive.`;
+        await refresh();
+      } else if (statusEl) {
+        statusEl.textContent = `No new results as of ${new Date().toLocaleTimeString()}.`;
+      }
       return;
     }
 
@@ -487,7 +498,8 @@ async function checkLiveResults(manual) {
     }
 
     const summary = actions.map(a => a.type === 'champion' ? `${a.team} crowned champion!` : `${a.team} eliminated (${a.round})`).join(', ');
-    if (statusEl) statusEl.textContent = `Updated: ${summary}`;
+    const prefix = restoredGroupStage ? `Also restored ${seedResult.applied} group-stage elimination(s). ` : '';
+    if (statusEl) statusEl.textContent = `${prefix}Updated: ${summary}`;
     await refresh();
   } catch (err) {
     if (statusEl) statusEl.textContent = 'Live check failed: ' + err.message;

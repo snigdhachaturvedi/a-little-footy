@@ -14,6 +14,16 @@ const TICKET_HEADERS = ['TicketId', 'Name', 'Team', 'Amount', 'Timestamp'];
 const TEAM_HEADERS = ['Team', 'Eliminated', 'Round', 'Date'];
 const WINNER_HEADERS = ['Name', 'TicketId', 'StakeOnChampion', 'PayoutShare'];
 
+// Group stage is over for good — this is fixed historical fact, not something the live
+// results checker can safely re-derive (a single match's win/loss doesn't determine group
+// qualification; that needs full standings/tie-breakers). Kept here so it survives an
+// admin "reset pool" without needing a manual API call to restore it.
+const GROUP_STAGE_ELIMINATED = [
+  'Czechia', 'Qatar', 'Haiti', 'Turkey', 'Curacao', 'Tunisia', 'New Zealand',
+  'Saudi Arabia', 'Iraq', 'Jordan', 'Uzbekistan', 'Panama',
+  'South Korea', 'Scotland', 'Iran', 'Uruguay',
+];
+
 function getSheet_(name) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(name);
@@ -101,6 +111,8 @@ function doPost(e) {
         return jsonOut_(declareChampion_(body));
       case 'resetPool':
         return jsonOut_(resetPool_(body));
+      case 'seedGroupStage':
+        return jsonOut_(seedGroupStage_(body));
       default:
         return jsonOut_({ ok: false, error: 'Unknown action: ' + body.action });
     }
@@ -262,4 +274,29 @@ function resetPool_(body) {
   }
 
   return { ok: true };
+}
+
+function seedGroupStage_(body) {
+  checkPassword_(body.password, 'AdminPassword');
+
+  const eliminatedSet = new Set(GROUP_STAGE_ELIMINATED);
+  const teams = readRows_(SHEET_TEAMS);
+  let applied = 0;
+
+  teams.forEach(t => {
+    // Never downgrade a team already eliminated at a later stage (e.g. Round of 32) — only
+    // fill in group-stage exits that got wiped (typically by a pool reset) and are
+    // currently showing alive.
+    if (eliminatedSet.has(t.Team) && t.Eliminated !== true) {
+      const found = findTeamRow_(t.Team);
+      if (found) {
+        found.sheet.getRange(found.rowIndex, 2).setValue(true);
+        found.sheet.getRange(found.rowIndex, 3).setValue('Group Stage');
+        found.sheet.getRange(found.rowIndex, 4).setValue(new Date());
+        applied++;
+      }
+    }
+  });
+
+  return { ok: true, applied };
 }
