@@ -113,6 +113,8 @@ function doPost(e) {
         return jsonOut_(resetPool_(body));
       case 'seedGroupStage':
         return jsonOut_(seedGroupStage_(body));
+      case 'removeTicket':
+        return jsonOut_(removeTicket_(body));
       default:
         return jsonOut_({ ok: false, error: 'Unknown action: ' + body.action });
     }
@@ -200,14 +202,7 @@ function reviveTeam_(body) {
   return { ok: true };
 }
 
-function declareChampion_(body) {
-  checkPassword_(body.password, 'AdminPassword');
-  const champion = (body.team || '').trim();
-  const validTeams = new Set(readRows_(SHEET_TEAMS).map(t => t.Team));
-  if (!validTeams.has(champion)) throw new Error('Unknown team: ' + champion);
-
-  setConfigValue_('Champion', champion);
-
+function computeWinners_(champion) {
   const tickets = readRows_(SHEET_TICKETS);
   const totalPool = tickets.reduce((s, t) => s + Number(t.Amount), 0);
   const championPicks = tickets.filter(t => t.Team === champion);
@@ -229,9 +224,45 @@ function declareChampion_(body) {
   }
 
   setConfigValue_('TotalPool', totalPool);
+  return { totalPool, totalChampionStake };
+}
+
+function declareChampion_(body) {
+  checkPassword_(body.password, 'AdminPassword');
+  const champion = (body.team || '').trim();
+  const validTeams = new Set(readRows_(SHEET_TEAMS).map(t => t.Team));
+  if (!validTeams.has(champion)) throw new Error('Unknown team: ' + champion);
+
+  setConfigValue_('Champion', champion);
+  const totals = computeWinners_(champion);
   setConfigValue_('WinnersAnnounced', true);
 
-  return { ok: true, champion, totalPool, totalChampionStake };
+  return { ok: true, champion, totalPool: totals.totalPool, totalChampionStake: totals.totalChampionStake };
+}
+
+function removeTicket_(body) {
+  checkPassword_(body.password, 'AdminPassword');
+  const ticketId = (body.ticketId || '').trim();
+  if (!ticketId) throw new Error('ticketId is required');
+
+  const sheet = getSheet_(SHEET_TICKETS);
+  const data = sheet.getDataRange().getValues();
+  let removed = 0;
+  // Walk bottom-up so row deletions don't shift indices we haven't visited yet.
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === ticketId) {
+      sheet.deleteRow(i + 1);
+      removed++;
+    }
+  }
+  if (removed === 0) throw new Error('No bet found with that id');
+
+  // If a champion is already declared, payouts depend on total stakes — recompute so the
+  // Winners tab stays correct after removing a bet.
+  const champion = getConfig_().Champion;
+  if (champion) computeWinners_(String(champion));
+
+  return { ok: true, removed };
 }
 
 function deleteConfigKey_(key) {

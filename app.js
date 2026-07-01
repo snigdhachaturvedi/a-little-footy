@@ -172,6 +172,74 @@ function renderPlayers(tickets, teams) {
     });
 }
 
+function renderAdminBets(tickets, teams) {
+  const list = $('adminBetsList');
+  if (!list) return;
+  const out = eliminatedSet(teams);
+  const grouped = groupTickets(tickets);
+  list.innerHTML = '';
+
+  if (grouped.length === 0) {
+    list.innerHTML = '<p class="hint">No bets to manage yet.</p>';
+    return;
+  }
+
+  grouped
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(g => {
+      const row = document.createElement('div');
+      row.className = 'admin-bet-row';
+
+      const info = document.createElement('div');
+      info.className = 'admin-bet-info';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'player-name';
+      nameEl.textContent = g.name; // textContent avoids HTML injection from user names
+      const picksEl = document.createElement('span');
+      picksEl.className = 'player-picks';
+      g.picks.forEach(p => {
+        const chip = document.createElement('span');
+        chip.className = 'pick-chip' + (out.has(p.team) ? ' out' : '');
+        chip.textContent = `${p.team} · Rs.${p.amount}`;
+        picksEl.appendChild(chip);
+      });
+      info.appendChild(nameEl);
+      info.appendChild(picksEl);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'remove-bet-btn';
+      btn.textContent = '🗑️ Remove';
+      btn.addEventListener('click', () => removeBet(g.ticketId, g.name));
+
+      row.appendChild(info);
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+}
+
+async function removeBet(ticketId, name) {
+  const feedback = $('removeBetFeedback');
+  feedback.textContent = '';
+  feedback.className = 'feedback';
+  if (!window.confirm(`Remove ${name}'s bet? This can't be undone.`)) return;
+
+  try {
+    const result = await apiPost({ action: 'removeTicket', ticketId, password: getPoolPassword() });
+    if (result.ok) {
+      feedback.textContent = `Removed ${name}'s bet.`;
+      feedback.classList.add('success');
+      await refresh();
+    } else {
+      feedback.textContent = result.error || 'Something went wrong.';
+      feedback.classList.add('error');
+    }
+  } catch (err) {
+    feedback.textContent = 'Network error: ' + err.message;
+    feedback.classList.add('error');
+  }
+}
+
 function renderWinners(winners) {
   const card = $('winnersCard');
   const list = $('winnersList');
@@ -327,6 +395,7 @@ async function refresh() {
     renderPlayers(data.tickets, data.teams);
     renderWinners(data.winners);
     $('adminTabBtn').classList.toggle('hidden', !data.isAdmin);
+    if (data.isAdmin) renderAdminBets(data.tickets, data.teams);
 
     if ($('picksContainer').children.length === 0) addPickRow();
     document.querySelectorAll('#picksContainer .pick-team').forEach(sel => {
