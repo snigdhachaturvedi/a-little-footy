@@ -417,7 +417,7 @@ function setupTabs() {
       btn.classList.add('active');
       document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
       $('panel-' + btn.dataset.tab).classList.remove('hidden');
-      if (btn.dataset.tab === 'fixtures') loadFixtures();
+      if (btn.dataset.tab === 'fixtures') { loadWinnerOdds(); loadFixtures(); }
     });
   });
 }
@@ -498,7 +498,74 @@ async function fetchLiveEvents() {
   return data.events || [];
 }
 
-// ---- Fixtures & odds ----
+// ---- Title-winner odds (Polymarket) ----
+const POLYMARKET_URL = 'https://gamma-api.polymarket.com/events?slug=world-cup-winner';
+let winnerOddsLoaded = false;
+
+// Polymarket team names that differ from our Teams-sheet names (mostly identical; a few safety maps).
+const POLY_NAME_MAP = {
+  'United States': 'USA',
+  'South Korea': 'South Korea',
+  'Ivory Coast': 'Ivory Coast',
+  'DR Congo': 'DR Congo',
+  'Bosnia and Herzegovina': 'Bosnia and Herzegovina',
+};
+function mapPolyTeam(name) { return POLY_NAME_MAP[name] || name; }
+
+async function loadWinnerOdds(force) {
+  if (winnerOddsLoaded && !force) return;
+  const list = $('winnerOddsList');
+  if (!list) return;
+  if (!winnerOddsLoaded) list.innerHTML = '<p class="hint">Loading title odds…</p>';
+
+  try {
+    const res = await fetch(POLYMARKET_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const ev = Array.isArray(data) ? data[0] : data;
+    const markets = (ev && ev.markets) || [];
+    const eliminated = eliminatedSet(state.teams);
+
+    const rows = markets
+      .filter(m => m.active && !m.closed)
+      .map(m => {
+        let prob = 0;
+        try { prob = Number(JSON.parse(m.outcomePrices || '["0"]')[0]) || 0; } catch (e) { prob = 0; }
+        return { team: mapPolyTeam(m.groupItemTitle || ''), prob };
+      })
+      .filter(r => r.team && !eliminated.has(r.team) && r.prob > 0)
+      .sort((a, b) => b.prob - a.prob);
+
+    renderWinnerOdds(rows);
+    winnerOddsLoaded = true;
+  } catch (err) {
+    list.innerHTML = `<p class="hint">Couldn't load title odds right now (${err.message}).</p>`;
+  }
+}
+
+function renderWinnerOdds(rows) {
+  const list = $('winnerOddsList');
+  list.innerHTML = '';
+  if (!rows || rows.length === 0) {
+    list.innerHTML = '<p class="hint">No title-odds market available right now.</p>';
+    return;
+  }
+  const max = rows[0].prob || 1;
+  rows.forEach((r, i) => {
+    const pct = Math.round(r.prob * 100);
+    const row = document.createElement('div');
+    row.className = 'odds-row' + (i === 0 ? ' leader' : '');
+    row.innerHTML =
+      `<span class="odds-rank">${i + 1}</span>` +
+      `<span class="odds-flag">${flagImg(r.team, 40) || ''}</span>` +
+      `<span class="odds-team">${r.team}</span>` +
+      `<span class="odds-bar-wrap"><span class="odds-bar" style="width:${Math.max(4, (r.prob / max) * 100)}%"></span></span>` +
+      `<span class="odds-pct">${pct}%</span>`;
+    list.appendChild(row);
+  });
+}
+
+// ---- Fixtures & match odds (ESPN) ----
 const TOURNAMENT_END = '20260720';
 let fixturesLoaded = false;
 
@@ -753,8 +820,11 @@ function startApp() {
   refresh().then(() => checkLiveResults());
   setInterval(refresh, POLL_INTERVAL_MS);
   setInterval(() => checkLiveResults(), LIVE_CHECK_INTERVAL_MS);
-  // Refresh fixtures/odds periodically, but only once the user has opened that tab.
-  setInterval(() => { if (fixturesLoaded) loadFixtures(true); }, LIVE_CHECK_INTERVAL_MS);
+  // Refresh odds/fixtures periodically, but only once the user has opened that tab.
+  setInterval(() => {
+    if (fixturesLoaded) loadFixtures(true);
+    if (winnerOddsLoaded) loadWinnerOdds(true);
+  }, LIVE_CHECK_INTERVAL_MS);
 }
 
 function initGate() {

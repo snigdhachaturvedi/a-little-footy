@@ -699,7 +699,92 @@ input:focus, select:focus {
   border: 1px solid rgba(255, 92, 108, 0.3);
 }
 
-/* ---------- Fixtures & odds ---------- */
+/* ---------- Odds & fixtures ---------- */
+.subhead {
+  font-family: 'Archivo', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px;
+}
+
+.winner-odds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.odds-row {
+  display: grid;
+  grid-template-columns: 22px 30px 1fr 2.2fr 46px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.odds-row.leader {
+  border-color: rgba(255, 210, 77, 0.45);
+  background: linear-gradient(100deg, rgba(255, 210, 77, 0.12), var(--surface-2));
+}
+
+.odds-rank {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-align: center;
+  font-size: 0.9rem;
+}
+.odds-row.leader .odds-rank { color: var(--gold); }
+
+.odds-flag { display: flex; }
+.odds-flag img {
+  width: 28px; height: 20px;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.odds-team {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.odds-bar-wrap {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.odds-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--neon-soft), var(--neon));
+  box-shadow: 0 0 10px rgba(33, 240, 160, 0.5);
+}
+.odds-row.leader .odds-bar {
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+  box-shadow: 0 0 10px rgba(255, 210, 77, 0.5);
+}
+
+.odds-pct {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #fff;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .fixtures-list { display: flex; flex-direction: column; gap: 12px; }
 
 .fixture-card {
