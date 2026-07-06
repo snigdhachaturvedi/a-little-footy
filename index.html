@@ -55,9 +55,10 @@
   </section>
 
   <nav class="tabs" id="tabs">
-    <button class="tab-btn active" data-tab="bet">🎟️ Place Bet</button>
+    <button class="tab-btn active" data-tab="bet">🎟️ Bet</button>
     <button class="tab-btn" data-tab="teams">🌍 Teams</button>
-    <button class="tab-btn" data-tab="players">👥 Leaderboard</button>
+    <button class="tab-btn" data-tab="fixtures">📅 Fixtures</button>
+    <button class="tab-btn" data-tab="players">👥 Board</button>
     <button class="tab-btn hidden" data-tab="admin" id="adminTabBtn">🛠️ Admin</button>
   </nav>
 
@@ -94,6 +95,12 @@
       <span><i class="dot champ"></i> Champion</span>
     </div>
     <div id="teamsGrid" class="teams-grid"></div>
+  </section>
+
+  <section class="card panel hidden" id="panel-fixtures" data-panel="fixtures">
+    <h2>Fixtures &amp; Odds</h2>
+    <p class="hint">Upcoming matches with live odds from DraftKings (via ESPN). Odds are for each match, not the outright winner.</p>
+    <div id="fixturesList" class="fixtures-list"></div>
   </section>
 
   <section class="card panel hidden" id="panel-players" data-panel="players">

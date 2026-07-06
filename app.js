@@ -417,6 +417,7 @@ function setupTabs() {
       btn.classList.add('active');
       document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
       $('panel-' + btn.dataset.tab).classList.remove('hidden');
+      if (btn.dataset.tab === 'fixtures') loadFixtures();
     });
   });
 }
@@ -495,6 +496,129 @@ async function fetchLiveEvents() {
   if (!res.ok) throw new Error('Scoreboard fetch failed: ' + res.status);
   const data = await res.json();
   return data.events || [];
+}
+
+// ---- Fixtures & odds ----
+const TOURNAMENT_END = '20260720';
+let fixturesLoaded = false;
+
+async function loadFixtures(force) {
+  if (fixturesLoaded && !force) return;
+  const list = $('fixturesList');
+  if (!list) return;
+  if (!fixturesLoaded) list.innerHTML = '<p class="hint">Loading fixtures…</p>';
+
+  try {
+    const url = `${ESPN_SCOREBOARD_URL}?dates=${todayCompact()}-${TOURNAMENT_END}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const upcoming = (data.events || []).filter(ev => {
+      const st = ev.competitions && ev.competitions[0] && ev.competitions[0].status;
+      return st && st.type && st.type.state === 'pre';
+    });
+    renderFixtures(upcoming);
+    fixturesLoaded = true;
+  } catch (err) {
+    list.innerHTML = `<p class="hint">Couldn't load fixtures right now (${err.message}). Try again shortly.</p>`;
+  }
+}
+
+// American moneyline -> implied win probability (includes bookmaker margin).
+function impliedProb(ml) {
+  if (ml < 0) return (-ml) / ((-ml) + 100);
+  return 100 / (ml + 100);
+}
+
+// details looks like "ESP -110" / "USA +135" -> { abbr, ml }.
+function parseOddsDetails(details) {
+  const m = String(details || '').match(/^([A-Za-z]+)\s+([+-]\d+)$/);
+  if (!m) return null;
+  return { abbr: m[1], ml: Number(m[2]) };
+}
+
+function isPlaceholderName(name) {
+  return /winner|loser|tbd/i.test(name || '');
+}
+
+function renderFixtures(events) {
+  const list = $('fixturesList');
+  list.innerHTML = '';
+  if (!events || events.length === 0) {
+    list.innerHTML = '<p class="hint">No upcoming fixtures — the tournament may be finished. 🏆</p>';
+    return;
+  }
+
+  events
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .forEach(ev => {
+      const comp = ev.competitions[0];
+      const round = humanizeRound(ev.season && ev.season.slug);
+      const competitors = comp.competitors || [];
+      const home = competitors.find(c => c.homeAway === 'home') || competitors[0] || {};
+      const away = competitors.find(c => c.homeAway === 'away') || competitors[1] || {};
+
+      const odds = (comp.odds || [])[0];
+      const parsed = odds ? parseOddsDetails(odds.details) : null;
+
+      const card = document.createElement('div');
+      card.className = 'fixture-card';
+
+      const kickoff = new Date(ev.date).toLocaleString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      });
+
+      const head = document.createElement('div');
+      head.className = 'fixture-head';
+      head.innerHTML = `<span class="fixture-round">${round}</span><span class="fixture-time">${kickoff}</span>`;
+      card.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'fixture-body';
+      body.appendChild(fixtureTeamEl(home, parsed));
+      const vs = document.createElement('span');
+      vs.className = 'fixture-vs';
+      vs.textContent = 'vs';
+      body.appendChild(vs);
+      body.appendChild(fixtureTeamEl(away, parsed));
+      card.appendChild(body);
+
+      const meta = document.createElement('div');
+      meta.className = 'fixture-odds';
+      if (parsed) {
+        const favName = favoredTeamName(competitors, parsed.abbr);
+        const pct = Math.round(impliedProb(parsed.ml) * 100);
+        const drawMl = odds.drawOdds && odds.drawOdds.moneyLine;
+        meta.innerHTML =
+          `<span class="odds-chip">⭐ ${favName || parsed.abbr} favoured · ${parsed.ml > 0 ? '+' : ''}${parsed.ml} (~${pct}%)</span>` +
+          (odds.overUnder != null ? `<span class="odds-chip subtle">O/U ${odds.overUnder} goals</span>` : '') +
+          (drawMl != null ? `<span class="odds-chip subtle">Draw ${drawMl > 0 ? '+' : ''}${drawMl}</span>` : '');
+      } else {
+        meta.innerHTML = '<span class="odds-chip subtle">Odds not posted yet</span>';
+      }
+      card.appendChild(meta);
+
+      list.appendChild(card);
+    });
+}
+
+function favoredTeamName(competitors, abbr) {
+  const c = competitors.find(x => x.team && x.team.abbreviation === abbr);
+  return c ? mapEspnTeam(c.team.displayName) : null;
+}
+
+function fixtureTeamEl(competitor, parsed) {
+  const el = document.createElement('div');
+  el.className = 'fixture-team';
+  const espnName = (competitor.team && competitor.team.displayName) || 'TBD';
+  const placeholder = isPlaceholderName(espnName) || !competitor.team;
+  const name = placeholder ? espnName : mapEspnTeam(espnName);
+  const isFav = parsed && competitor.team && competitor.team.abbreviation === parsed.abbr;
+
+  const flag = placeholder ? '' : flagImg(name, 60);
+  el.innerHTML = `${flag || '<span class="fixture-flag-tbd">🏳️</span>'}<span class="fixture-team-name">${name}</span>`;
+  if (isFav) el.classList.add('fav');
+  return el;
 }
 
 let liveCheckRunning = false;
@@ -629,6 +753,8 @@ function startApp() {
   refresh().then(() => checkLiveResults());
   setInterval(refresh, POLL_INTERVAL_MS);
   setInterval(() => checkLiveResults(), LIVE_CHECK_INTERVAL_MS);
+  // Refresh fixtures/odds periodically, but only once the user has opened that tab.
+  setInterval(() => { if (fixturesLoaded) loadFixtures(true); }, LIVE_CHECK_INTERVAL_MS);
 }
 
 function initGate() {
