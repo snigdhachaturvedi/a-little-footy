@@ -66,6 +66,26 @@ with your deployment URL. Save, then reload `index.html`.
 - To simulate an elimination, flip a team's `Eliminated` cell to `TRUE` directly in the `Teams` tab (or send a POST with `action: "eliminateTeam"` and the `AdminPassword`) — the site picks it up within 60 seconds.
 - To declare a champion and trigger payouts, send a POST with `action: "declareChampion"`, the `team` name, and the `AdminPassword`. A `Winners` tab will be created automatically with proportional payouts.
 
+## Automatic result updates (recommended)
+
+The website marks teams eliminated only while an **admin** has the site open. To keep results
+current 24/7 regardless of who's online, run the `autoUpdateResults` function on a schedule —
+it executes on Google's servers and needs no browser:
+
+1. In the Apps Script editor (with the latest `Code.gs` pasted in), open **Triggers** (the ⏰ clock icon in the left sidebar).
+2. Click **+ Add Trigger** (bottom right) and set:
+   - **Function to run**: `autoUpdateResults`
+   - **Event source**: Time-driven
+   - **Type**: Hour timer → **Every hour** (or Minutes timer → every 30 min during match days)
+3. **Save.** The first time, Google asks you to authorize the script's access to fetch external
+   URLs (ESPN) — approve it.
+
+That's it. Every hour it fetches completed knockout results and marks losers eliminated /
+declares the champion automatically. You can also run it once manually from the editor
+(select `autoUpdateResults` in the toolbar dropdown → **Run**) to test it. The in-app admin
+checker still works too and gives near-instant updates while you're viewing the site — the
+trigger is just the always-on safety net.
+
 ## Admin: resetting the pool
 
 Logging in with the `AdminPassword` unlocks a hidden **Admin** tab on the site with a "Reset Pool" control (type `RESET` to confirm). This wipes all bets, sets every team back to alive, and clears the champion/winners — use it to start a new pool from scratch. There's no undo, so double-check before confirming.

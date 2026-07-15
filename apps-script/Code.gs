@@ -331,3 +331,91 @@ function seedGroupStage_(body) {
 
   return { ok: true, applied };
 }
+
+/**
+ * Server-side auto-updater. Runs on a time-driven trigger (see SETUP.md) so team
+ * eliminations stay current even when nobody has the website open. Fetches completed
+ * knockout results from ESPN's free scoreboard and marks losers eliminated / declares the
+ * champion. Group-stage results are intentionally NOT auto-processed (they depend on full
+ * group standings, which ESPN's per-match data doesn't reliably express) — those are seeded
+ * separately via GROUP_STAGE_ELIMINATED.
+ */
+var ESPN_SCOREBOARD_GS = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+var TOURNAMENT_START_GS = '20260611';
+var ESPN_NAME_MAP_GS = {
+  'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
+  'Congo DR': 'DR Congo',
+  'Curaçao': 'Curacao',
+  'Türkiye': 'Turkey',
+  'United States': 'USA'
+};
+
+function mapEspnTeamGs_(name) {
+  return ESPN_NAME_MAP_GS[name] || name;
+}
+
+function humanizeRoundGs_(slug) {
+  return String(slug || '').split('-').map(function (w) {
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+
+function autoUpdateResults() {
+  var end = Utilities.formatDate(new Date(Date.now() + 24 * 60 * 60 * 1000), 'Etc/UTC', 'yyyyMMdd');
+  var url = ESPN_SCOREBOARD_GS + '?dates=' + TOURNAMENT_START_GS + '-' + end;
+  var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) {
+    return { ok: false, error: 'ESPN HTTP ' + resp.getResponseCode() };
+  }
+  var data = JSON.parse(resp.getContentText());
+  var events = data.events || [];
+
+  var teamRows = readRows_(SHEET_TEAMS);
+  var known = {}, eliminated = {};
+  teamRows.forEach(function (t) {
+    known[t.Team] = true;
+    if (t.Eliminated === true) eliminated[t.Team] = true;
+  });
+  var config = getConfig_();
+  var changes = [];
+
+  events.forEach(function (ev) {
+    var comp = ev.competitions && ev.competitions[0];
+    var slug = ev.season && ev.season.slug;
+    if (!comp || !slug || slug === 'group-stage') return;
+    var st = comp.status && comp.status.type;
+    if (!st || !st.completed) return;
+
+    var comps = comp.competitors || [];
+    var winner = null, loser = null;
+    comps.forEach(function (c) {
+      if (c.winner === true) winner = c;
+      else if (c.winner === false) loser = c;
+    });
+    if (!winner || !loser) return;
+
+    var loserName = mapEspnTeamGs_(loser.team.displayName);
+    var winnerName = mapEspnTeamGs_(winner.team.displayName);
+    var round = humanizeRoundGs_(slug);
+
+    if (known[loserName] && !eliminated[loserName]) {
+      var found = findTeamRow_(loserName);
+      if (found) {
+        found.sheet.getRange(found.rowIndex, 2).setValue(true);
+        found.sheet.getRange(found.rowIndex, 3).setValue(round);
+        found.sheet.getRange(found.rowIndex, 4).setValue(new Date());
+        eliminated[loserName] = true;
+        changes.push('Eliminated ' + loserName + ' (' + round + ')');
+      }
+    }
+
+    if (slug === 'final' && known[winnerName] && config.Champion !== winnerName) {
+      setConfigValue_('Champion', winnerName);
+      computeWinners_(winnerName);
+      setConfigValue_('WinnersAnnounced', true);
+      changes.push('Champion: ' + winnerName);
+    }
+  });
+
+  return { ok: true, changes: changes };
+}
